@@ -1,94 +1,58 @@
-# ToastKit-iOS
+<h1 align="center">Official ToastKit iOS SDK</h1>
 
-Enterprise Swift Package distribution for the ToastKit iOS client.
+<p align="center">
+  Binary Swift Package for realtime in-app toast delivery on iOS.
+</p>
 
-This repository publishes the public iOS SDK as a binary Swift Package. The package exposes the `ToastKit` product, which provides:
+<p align="center">
+  <a href="https://github.com/bairisland/ToastKit-iOS/releases/tag/0.1.0">
+    <img src="https://img.shields.io/github/v/release/bairisland/ToastKit-iOS?label=release" alt="Release">
+  </a>
+  <a href="#installation">
+    <img src="https://img.shields.io/badge/distribution-SwiftPM-orange" alt="SwiftPM">
+  </a>
+  <a href="#requirements">
+    <img src="https://img.shields.io/badge/iOS-17%2B-blue" alt="iOS 17+">
+  </a>
+  <a href="#binary-distribution">
+    <img src="https://img.shields.io/badge/package-binary%20target-black" alt="Binary Target">
+  </a>
+</p>
+
+ToastKit gives iOS teams a single client surface for:
 
 - Realtime foreground toast delivery over WebSocket
-- Topic-based subscription and multi-tenant org-channel scoping
-- SwiftUI overlay mounting with a single view modifier
-- APNs fallback state management hooks
-- Local preview and delivery-path simulation helpers for QA and integration testing
+- Topic-based routing for user and org-scoped channels
+- SwiftUI overlay mounting with one root-level modifier
+- APNs-aware client state hooks for fallback-oriented integrations
+- Local preview and delivery-path simulation helpers for QA
 
-This repository is the distribution layer. The packaged XCFramework is released through GitHub Releases and consumed through Swift Package Manager.
+This repository is the public distribution layer for the iOS SDK. It ships `ToastKit` as a binary Swift Package backed by a GitHub Release XCFramework.
 
-## Contents
+## Get Started
 
-- [What This Package Is](#what-this-package-is)
-- [Requirements](#requirements)
-- [Package Identity and Product Naming](#package-identity-and-product-naming)
-- [Installation](#installation)
-- [Integration Checklist](#integration-checklist)
-- [Quick Start](#quick-start)
-- [Authentication Modes](#authentication-modes)
-- [Topic Model](#topic-model)
-- [APNs Integration](#apns-integration)
-- [Runtime Behavior](#runtime-behavior)
-- [Public API Reference](#public-api-reference)
-- [Operational Guidance](#operational-guidance)
-- [Troubleshooting](#troubleshooting)
-- [Binary Distribution](#binary-distribution)
-- [Versioning](#versioning)
-
-## What This Package Is
-
-`ToastKit-iOS` is a binary-only Swift Package that ships the `ToastKit` client library.
-
-The intended runtime model is:
-
-1. Your app configures `ToastKit` with an app key and an identity source.
-2. Your app mounts the overlay once near the root of the SwiftUI view tree.
-3. Your app subscribes to one or more delivery topics.
-4. Toasts arriving while the app is foregrounded render in-app.
-5. When the app is backgrounded or not connected, your broader integration may use APNs fallback.
-
-This SDK focuses on client delivery and presentation. It does not expose a public server-side publish API from the app process.
+1. Obtain your ToastKit `appKey` and WebSocket endpoint from your deployment environment.
+2. Add `https://github.com/bairisland/ToastKit-iOS.git` to your app with Swift Package Manager.
+3. Configure `ToastKit` during app startup using a backend-issued JWT provider.
+4. Mount `.toastKitOverlay()` once near the root of your SwiftUI app.
+5. Subscribe to the user and org topics your session is authorized to receive.
 
 ## Requirements
 
-- iOS 17.0+
-- Xcode 16+
-- Swift Package Manager support from Xcode / Swift 5.7 manifest tooling
-
-## Package Identity and Product Naming
-
-These names are easy to mix up, so use the exact values below:
-
-- Repository URL: `https://github.com/bairisland/ToastKit-iOS.git`
-- Package identity: `ToastKit-iOS`
-- Product name: `ToastKit`
-- Import name: `ToastKit`
-
-In a consuming `Package.swift`, the correct declaration is:
-
-```swift
-dependencies: [
-    .package(url: "https://github.com/bairisland/ToastKit-iOS.git", from: "0.1.0")
-],
-targets: [
-    .target(
-        name: "YourTarget",
-        dependencies: [
-            .product(name: "ToastKit", package: "ToastKit-iOS")
-        ]
-    )
-]
-```
-
-In source files:
-
-```swift
-import ToastKit
-```
+| Component | Version |
+| --- | --- |
+| iOS | 17.0+ |
+| Xcode | 16+ |
+| Distribution | Swift Package Manager |
 
 ## Installation
 
 ### Xcode
 
-1. Open your app project in Xcode.
+1. Open your project in Xcode.
 2. Go to `File > Add Package Dependencies...`
-3. Enter `https://github.com/bairisland/ToastKit-iOS.git`
-4. Select a version rule such as `Up to Next Major` starting at `0.1.0`
+3. Search for `https://github.com/bairisland/ToastKit-iOS.git`
+4. Select a version rule starting from `0.1.0`
 5. Add the `ToastKit` product to your application target
 
 ### Swift Package Manager
@@ -116,21 +80,22 @@ let package = Package(
 )
 ```
 
-## Integration Checklist
+### Package Identity
 
-For a production integration, treat the following as the minimum setup:
+Use these exact names in consuming code:
 
-1. Add the Swift package and confirm `import ToastKit` resolves.
-2. Configure `ToastKit` once during app startup.
-3. Mount `.toastKitOverlay()` once on your root SwiftUI view tree.
-4. Register the APNs device token if you want fallback-aware behavior.
-5. Subscribe explicitly to the topics your user/session should receive.
-6. Keep JWT issuance and topic authorization in your backend, not in the app bundle.
-7. Register `ToastKit.onToast` once if you need analytics or side effects.
+- Repository URL: `https://github.com/bairisland/ToastKit-iOS.git`
+- Package identity: `ToastKit-iOS`
+- Product name: `ToastKit`
+- Import name: `ToastKit`
+
+```swift
+import ToastKit
+```
 
 ## Quick Start
 
-The example below shows the recommended SwiftUI shape for a real integration.
+The example below shows the intended SwiftUI integration shape for a production app.
 
 ```swift
 import SwiftUI
@@ -198,13 +163,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 }
 ```
 
-## Authentication Modes
+## Production Integration
 
-The SDK exposes two configuration modes.
+### Authenticated mode
 
-### 1. Authenticated mode
-
-Use this in production when your backend issues a short-lived bearer token:
+Use authenticated mode in production. Your backend should mint a short-lived JWT for the current user session.
 
 ```swift
 ToastKit.configure(
@@ -219,16 +182,16 @@ ToastKit.configure(
 )
 ```
 
-Use authenticated mode when:
+Recommended use cases:
 
-- topic access is enforced by backend-issued claims
-- users belong to one or more org scopes
-- tokens rotate over time
-- you do not want identity embedded in the client
+- user-specific topic authorization
+- org-scoped channel authorization
+- short-lived token rotation
+- production multi-tenant deployments
 
-### 2. Development mode
+### Development mode
 
-Use this only for local integration, preview environments, or controlled QA:
+Use development mode only for local integration, QA, or controlled preview environments.
 
 ```swift
 ToastKit.configure(
@@ -240,11 +203,11 @@ ToastKit.configure(
 )
 ```
 
-Development mode uses the supplied user ID as the local identity source. It is not a substitute for production auth.
+This mode is not a substitute for production auth.
 
-## Topic Model
+### Topic model
 
-Topic subscription is explicit. The SDK does not infer your business routing rules.
+Topic subscription is explicit. The SDK does not infer your routing model.
 
 Recommended topic patterns:
 
@@ -261,27 +224,25 @@ ToastKit.subscribe([
 ])
 ```
 
-To unsubscribe:
-
 ```swift
 ToastKit.unsubscribe([
     "org:org_123:billing"
 ])
 ```
 
-To subscribe using the configured org scope:
+If your app is tenant-bound, configure `organizationID` and use:
 
 ```swift
 ToastKit.subscribeOrgChannel("ops")
 ```
 
-`subscribeOrgChannel(_:)` uses `ToastKitOptions.organizationID`. If no org ID was configured, the call is ignored.
+`subscribeOrgChannel(_:)` uses the configured `ToastKitOptions.organizationID`. If no org ID is configured, the call is ignored.
 
-## APNs Integration
+### APNs integration
 
-ToastKit exposes client-side APNs state hooks. Register the token if your integration needs fallback-aware behavior or QA simulation.
+ToastKit exposes client-side APNs state hooks. Register the device token if your integration needs fallback-aware behavior or client-side QA simulation.
 
-### Register a token from Apple callbacks
+Register from Apple callbacks:
 
 ```swift
 func application(
@@ -292,87 +253,83 @@ func application(
 }
 ```
 
-### Register a token string directly
+Register a token string directly:
 
 ```swift
 ToastKit.registerAPNsDeviceTokenString("0123abcd...")
 ```
 
-### Configure the APNs environment
+Configure environment:
 
 ```swift
 ToastKit.setAPNsEnvironment(.production)
 ```
 
-### Temporarily disable fallback behavior
+Disable fallback-aware behavior:
 
 ```swift
 ToastKit.setFallbackEnabled(false)
 ```
 
-### Clear the local token
+Clear local token state:
 
 ```swift
 ToastKit.clearAPNsDeviceToken()
 ```
 
-Important constraint:
+Important:
 
-- This SDK stores APNs token state locally for client behavior.
-- If your backend requires explicit APNs token registration, perform that registration in your own integration layer.
-- Do not assume `registerAPNsDeviceToken` by itself publishes the token to your backend.
+- The SDK stores APNs token state locally for client behavior.
+- If your backend requires APNs token registration, perform that in your own application/backend integration.
+- Do not assume `registerAPNsDeviceToken` by itself publishes token state upstream.
 
-## Runtime Behavior
+## Runtime Model
 
-These semantics matter in production.
+### Overlay required for foreground rendering
 
-### Foreground rendering requires the overlay
-
-Toasts only render into your app UI when the overlay is mounted:
+Toasts render in-app only when the overlay is mounted:
 
 ```swift
 RootView()
     .toastKitOverlay()
 ```
 
-Mount the overlay once, as high in the SwiftUI tree as practical.
+Mount it once, as high in the SwiftUI hierarchy as practical.
 
-### `configure` starts the client lifecycle
+### Configuration is application-level
 
-`ToastKit.configure(...)` configures internal state and initiates connection flow. Use `ToastKit.connect()` if you explicitly disconnected earlier and want to reconnect under your own lifecycle control.
+`ToastKit.configure(...)` initializes process-wide client state and begins connection flow. Treat configuration as app startup work, not per-screen work.
 
-### Connection state is process-wide
+### Handlers are additive
 
-The client is implemented as a singleton-style process-wide runtime. Treat configuration and handler registration as application-level setup, not per-screen setup.
+`ToastKit.onToast(_:)` appends a handler and does not currently expose a removal token. Register it once during startup or in a dedicated app-wide coordinator.
 
-### Handlers accumulate
+### Local preview helpers are not your publish path
 
-`ToastKit.onToast(_:)` appends a callback and does not currently expose a removal token. Register it once during startup, not on every view appearance.
-
-### Local helpers are local helpers
-
-The following APIs are for testing, preview, or QA flows:
+The following APIs are intended for preview, QA, and local simulation:
 
 - `ToastKit.show(_:)`
 - `ToastKit.previewPublish(_:)`
 
-They do not replace your backend publish path.
+They do not replace a real backend publish path.
 
-## Public API Reference
+## Public API Overview
 
-### Configuration
+### Core entry points
 
-```swift
-ToastKit.configure(
-    appKey:userToken:apnsDeviceTokenProvider:options:
-)
+| Area | API |
+| --- | --- |
+| Configure | `configure(appKey:userToken:apnsDeviceTokenProvider:options:)` |
+| Configure for development | `configure(appKey:developmentUserID:apnsDeviceTokenProvider:options:)` |
+| Connection | `connect()`, `disconnect()`, `retryConnection()` |
+| Topic management | `subscribe(_:)`, `subscribeOrgChannel(_:)`, `unsubscribe(_:)` |
+| APNs state | `registerAPNsDeviceToken(_:)`, `registerAPNsDeviceTokenString(_:)`, `clearAPNsDeviceToken()` |
+| APNs behavior | `setAPNsEnvironment(_:)`, `setFallbackEnabled(_:)` |
+| Events | `onToast(_:)`, `latestToast` |
+| Local QA helpers | `show(_:)`, `previewPublish(_:)` |
+| SwiftUI | `View.toastKitOverlay()` |
 
-ToastKit.configure(
-    appKey:developmentUserID:apnsDeviceTokenProvider:options:
-)
-```
-
-`ToastKitOptions` fields:
+### `ToastKitOptions`
 
 | Field | Type | Default | Notes |
 | --- | --- | --- | --- |
@@ -384,65 +341,25 @@ ToastKit.configure(
 | `diagnosticsEnabled` | `Bool` | `true` | Enables internal diagnostics capture |
 | `reconnectPolicy` | `ToastKitReconnectPolicy` | default | Exponential reconnect settings |
 
-### Connection lifecycle
+### `ToastKitReconnectPolicy`
 
-```swift
-await ToastKit.connect()
-await ToastKit.disconnect()
-ToastKit.retryConnection()
-```
+| Field | Type | Default |
+| --- | --- | --- |
+| `initialDelay` | `TimeInterval` | `0.5` |
+| `multiplier` | `Double` | `2.0` |
+| `jitter` | `Double` | `0.2` |
+| `maxDelay` | `TimeInterval` | `30` |
+| `maxAttempts` | `Int` | `5` |
 
-Main-actor state accessors:
+### State accessors
+
+These accessors are `@MainActor`:
 
 ```swift
 let state = await MainActor.run { ToastKit.connectionState }
 let topics = await MainActor.run { ToastKit.subscribedTopics }
 let latest = await MainActor.run { ToastKit.latestToast }
 let apnsEnv = await MainActor.run { ToastKit.apnsEnvironment }
-```
-
-### Topic management
-
-```swift
-ToastKit.subscribe(["user:user_123"])
-ToastKit.subscribeOrgChannel("ops")
-ToastKit.unsubscribe(["user:user_123"])
-```
-
-### Toast callbacks
-
-```swift
-ToastKit.onToast { toast in
-    print(toast.title)
-}
-```
-
-### Local preview helpers
-
-```swift
-ToastKit.show(
-    ToastKitToast(
-        topic: "user:user_123",
-        title: "Build finished",
-        body: "The export completed successfully",
-        style: .success,
-        priority: .normal
-    )
-)
-```
-
-```swift
-let path = await MainActor.run {
-    ToastKit.previewPublish(
-        ToastKitPublishRequest(
-            topic: "user:user_123",
-            toast: ToastKitPublishPayload(
-                title: "Preview toast",
-                body: "Testing local delivery behavior"
-            )
-        )
-    )
-}
 ```
 
 ### Core models
@@ -476,6 +393,16 @@ let path = await MainActor.run {
 - `.normal`
 - `.high`
 
+`ToastKitConnectionState`
+
+- `.idle`
+- `.requestingSession`
+- `.connecting`
+- `.connected`
+- `.disconnected`
+- `.reconnecting`
+- `.failed(String)`
+
 `ToastKitDeliveryPath`
 
 - `.websocket`
@@ -484,35 +411,63 @@ let path = await MainActor.run {
 - `.localMock`
 - `.dropped`
 
-## Operational Guidance
+### Local preview examples
+
+```swift
+ToastKit.show(
+    ToastKitToast(
+        topic: "user:user_123",
+        title: "Build finished",
+        body: "The export completed successfully",
+        style: .success,
+        priority: .normal
+    )
+)
+```
+
+```swift
+let path = await MainActor.run {
+    ToastKit.previewPublish(
+        ToastKitPublishRequest(
+            topic: "user:user_123",
+            toast: ToastKitPublishPayload(
+                title: "Preview toast",
+                body: "Testing local delivery behavior"
+            )
+        )
+    )
+}
+```
+
+## Operational Notes
 
 ### JWT handling
 
-- Use short-lived JWTs.
 - Mint tokens server-side.
-- Keep topic claims least-privileged.
-- Rotate tokens through your normal auth refresh path.
-- Do not hardcode bearer tokens in the app bundle.
+- Keep tokens short-lived.
+- Scope topic claims narrowly.
+- Rotate tokens through your existing auth refresh flow.
+- Do not embed production bearer tokens in the application bundle.
 
 ### Multi-tenant isolation
 
 - Prefer org-scoped topics such as `org:<orgId>:<channel>`.
-- Configure `organizationID` when your app is tenant-bound.
-- Use `subscribeOrgChannel(_:)` to reduce accidental cross-tenant topic construction in client code.
+- Configure `organizationID` when the app session is tenant-bound.
+- Use `subscribeOrgChannel(_:)` to reduce client-side topic construction errors.
 
 ### Dedupe and collapse behavior
 
-If your publisher sends stable IDs, dedupe keys, or collapse keys, the client can suppress duplicate events and replace in-flight toasts with newer state.
+If your publisher sends stable IDs, dedupe keys, or collapse keys, the client can suppress duplicate toasts and replace in-flight toasts with newer state.
 
-If you want dedupe memory to survive process restarts, set:
+If dedupe memory should survive app restarts:
 
 ```swift
-ToastKitOptions(persistDedupe: true)
+let options = ToastKitOptions(
+    persistDedupe: true
+)
 ```
 
 ### Debug logging
-
-The SDK exposes a debug flag:
 
 ```swift
 ToastKit.debug = true
@@ -524,7 +479,7 @@ Use this only in debug builds or controlled troubleshooting sessions.
 
 ### `import ToastKit` fails
 
-Check the package product declaration in the consuming target:
+Check that your target dependency references the correct package identity and product:
 
 ```swift
 .product(name: "ToastKit", package: "ToastKit-iOS")
@@ -536,9 +491,9 @@ Check the common failure points:
 
 1. `.toastKitOverlay()` is not mounted at the app root.
 2. The app is not foregrounded.
-3. No matching topic subscription was added.
-4. Your callback was registered but UI overlay was never mounted.
-5. Your topic was unauthorized by the token claims.
+3. No matching topic subscription exists.
+4. Your `onToast` side effects are registered, but the overlay is missing.
+5. Your token claims do not authorize the requested topics.
 
 ### APNs fallback does not occur
 
@@ -546,15 +501,15 @@ Check:
 
 1. A device token was registered with `ToastKit`.
 2. Fallback was not disabled with `setFallbackEnabled(false)`.
-3. Your backend has whatever APNs registration flow it requires.
+3. Your wider integration registered the APNs token wherever your backend expects it.
 
-### You see duplicate side effects from `onToast`
+### Duplicate event side effects
 
-Register `ToastKit.onToast` once. Re-registering the handler on every screen or every appearance will stack callbacks.
+Register `ToastKit.onToast` once. Re-registering it on repeated view appearances will stack handlers.
 
 ## Binary Distribution
 
-This repository publishes a binary target backed by the release asset:
+This repository publishes a binary target backed by the GitHub Release asset:
 
 ```text
 https://github.com/bairisland/ToastKit-iOS/releases/download/0.1.0/ToastKit.xcframework.zip
@@ -570,6 +525,6 @@ The public [Package.swift](/Users/bairisland/Developer/ToastKit-iOS/Package.swif
 
 ## Versioning
 
-- Git tag: `0.1.0`
+- Current tag: `0.1.0`
 - Distribution model: binary Swift Package via GitHub Release asset
-- Consumer dependency recommendation: `from: "0.1.0"`
+- Recommended consumer dependency rule: `from: "0.1.0"`
