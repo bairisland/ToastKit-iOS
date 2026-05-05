@@ -29,6 +29,8 @@ ToastKit gives iOS teams a single client surface for:
 
 This repository is the public distribution layer for the iOS SDK. It ships `ToastKit` as a binary Swift Package backed by a GitHub Release XCFramework.
 
+https://toast-kit.replit.app/
+
 ## Get Started
 
 1. Obtain your ToastKit `appKey` and WebSocket endpoint from your deployment environment.
